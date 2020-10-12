@@ -1,23 +1,25 @@
-FROM golang:1.14-alpine as builder
+######dockerfile
+FROM ruby:2.5.3
 
-WORKDIR /build
+# Setup environment variables that will be available to the instance
+ENV APP_HOME /web
 
-# Fetch dependencies.
-COPY go.mod go.sum ./
-RUN go mod download
+ENV HOST 9001
 
-# Copy code.
-COPY main.go ./
+# Create a directory for our application
+# and set it as the working directory
 
-# Build the command inside the container.
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o main ./main.go
+RUN mkdir $APP_HOME
+WORKDIR $APP_HOME
 
-FROM scratch
+# Add our Gemfile
+# and install gems
 
-# Copy the binary to the production image from the builder stage.
-COPY --from=builder /build/main /main
+ADD Gemfile* $APP_HOME/
+RUN bundle install
 
-EXPOSE 9001
+# Copy over our application code
+ADD . $APP_HOME
 
-# Entrypoint.
-ENTRYPOINT ["/main"]
+# Run our app
+CMD RACK_ENV=development rackup -p $HOST
